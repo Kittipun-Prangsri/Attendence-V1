@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Attendance | Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar glass">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-hospital-user"></i>
+            </div>
+            <h2>Attendente</h2>
+        </div>
+        <ul class="nav-links">
+            <a href="/" class="nav-item active">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>แดชบอร์ด</span>
+            </a>
+            <a href="/schedule.html" class="nav-item">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>ตารางเวร</span>
+            </a>
+            <a href="/reports.html" class="nav-item">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>รายงานประจำเดือน</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>จัดการบุคลากร</span>
+            </a>
+            <a href="/login.html" class="nav-item" style="margin-top: auto;" onclick="localStorage.removeItem('user')">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>ออกจากระบบ</span>
+            </a>
+        </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1>ภาพรวมการปฏิบัติงานวันนี้</h1>
+                <div style="display: flex; gap: 15px; align-items: center; margin-top: 5px;">
+                    <p style="color: var(--text-gray);" id="current-date">กำลังโหลดวันที่...</p>
+                    <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.4); padding: 4px 12px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                        <label for="late-time-input" style="font-size: 0.8rem; font-weight: 500; color: var(--dark); margin-bottom: 0;">ตั้งเวลาสาย:</label>
+                        <input type="time" id="late-time-input" value="08:30" onchange="fetchDashboardData()" style="border: none; background: transparent; font-family: 'Prompt'; font-size: 0.9rem; outline: none; color: var(--primary); font-weight: 600; cursor: pointer;">
+                    </div>
+                </div>
+            </div>
+            <div class="user-profile glass" style="padding: 0.5rem 1rem; border-radius: 30px;">
+                <div class="avatar">A</div>
+                <div style="margin-right: 10px;">
+                    <p style="font-weight: 600; font-size: 0.9rem;" id="profile-name">Admin Khos</p>
+                    <p style="font-size: 0.75rem; color: var(--text-gray);" id="profile-role">ผู้ดูแลระบบ</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Actions -->
+        <div class="glass" style="display: flex; gap: 1rem; padding: 1.5rem; margin-bottom: 2rem; border-radius: 16px; align-items: center;">
+            <div style="flex: 1;">
+                <h3 style="margin-bottom: 5px; color: var(--dark);">ลงเวลาทำงาน (Time Attendance)</h3>
+                <p style="font-size: 0.85rem; color: var(--text-gray);">กรุณากดปุ่มเพื่อบันทึกเวลาเข้างาน หรือออกงานของคุณ</p>
+            </div>
+            <button style="padding: 12px 24px; background: var(--success); color: white; border: none; border-radius: 12px; font-family: 'Prompt'; font-size: 1rem; font-weight: 500; cursor: pointer; box-shadow: 0 4px 10px rgba(42, 157, 143, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="recordAttendance('check-in')">
+                <i class="fa-solid fa-right-to-bracket" style="margin-right: 8px;"></i> Check-in (เข้างาน)
+            </button>
+            <button style="padding: 12px 24px; background: var(--danger); color: white; border: none; border-radius: 12px; font-family: 'Prompt'; font-size: 1rem; font-weight: 500; cursor: pointer; box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="recordAttendance('check-out')">
+                <i class="fa-solid fa-right-from-bracket" style="margin-right: 8px;"></i> Check-out (ออกงาน)
+            </button>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card glass">
+                <div class="stat-icon primary">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div class="stat-details">
+                    <h3>บุคลากรทั้งหมด</h3>
+                    <p id="stat-total">120</p>
+                </div>
+            </div>
+            <div class="stat-card glass">
+                <div class="stat-icon success">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <div class="stat-details">
+                    <h3>เข้างานแล้ว</h3>
+                    <p id="stat-present">105</p>
+                </div>
+            </div>
+            <div class="stat-card glass">
+                <div class="stat-icon warning">
+                    <i class="fa-solid fa-user-clock"></i>
+                </div>
+                <div class="stat-details">
+                    <h3>สาย</h3>
+                    <p id="stat-late">8</p>
+                </div>
+            </div>
+            <div class="stat-card glass">
+                <div class="stat-icon danger">
+                    <i class="fa-solid fa-user-minus"></i>
+                </div>
+                <div class="stat-details">
+                    <h3>ขาด/ลา</h3>
+                    <p id="stat-absent">7</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Table -->
+        <section class="recent-activity glass">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 class="section-title" style="margin-bottom: 0;">ประวัติการสแกนเข้า-ออกล่าสุด</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label for="limit-select" style="font-size: 0.9rem; color: var(--text-gray);">แสดง:</label>
+                    <select id="limit-select" onchange="fetchRecentActivity()" style="padding: 6px; border: 1px solid var(--glass-border); border-radius: 6px; background: rgba(255,255,255,0.5); font-family: 'Prompt'; outline: none;">
+                        <option value="5">5 รายการ</option>
+                        <option value="10" selected>10 รายการ</option>
+                        <option value="20">20 รายการ</option>
+                    </select>
+                    <button style="padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt';" onclick="fetchRecentActivity(); fetchDashboardData();"><i class="fa-solid fa-arrows-rotate"></i> รีเฟรชข้อมูล</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ชื่อ-นามสกุล</th>
+                        <th>แผนก</th>
+                        <th>เวลาเข้างาน</th>
+                        <th>เวลาออกงาน</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody id="activity-table">
+                    <tr>
+                        <td>นาย สมชาย ใจดี</td>
+                        <td>แผนกฉุกเฉิน (ER)</td>
+                        <td>07:45:00</td>
+                        <td>-</td>
+                        <td><span class="status-badge status-in">เข้างานปกติ</span></td>
+                    </tr>
+                    <tr>
+                        <td>นางสาว มาลี ศรีเมือง</td>
+                        <td>ผู้ป่วยนอก (OPD)</td>
+                        <td>08:15:22</td>
+                        <td>-</td>
+                        <td><span class="status-badge status-late">เข้าสาย</span></td>
+                    </tr>
+                    <tr>
+                        <td>นาย วิทยา เก่งกาจ</td>
+                        <td>ศัลยกรรม</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td><span class="status-badge status-leave">ลาป่วย</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>
