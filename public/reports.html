@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Attendance | รายงาน</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <aside class="sidebar glass">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-hospital-user"></i>
+            </div>
+            <h2>Attendente</h2>
+        </div>
+        <ul class="nav-links">
+            <a href="/" class="nav-item">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>แดชบอร์ด</span>
+            </a>
+            <a href="/schedule.html" class="nav-item">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>ตารางเวร</span>
+            </a>
+            <a href="/reports.html" class="nav-item active">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>รายงานประจำเดือน</span>
+            </a>
+            <a href="/login.html" class="nav-item" style="margin-top: auto;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>ออกจากระบบ</span>
+            </a>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1>รายงานประจำเดือน</h1>
+                <p style="color: var(--text-gray); margin-top: 5px;">สรุปข้อมูลการลงเวลาทำงานและส่งออกเป็น PDF/Excel</p>
+            </div>
+            <div class="user-profile glass" style="padding: 0.5rem 1rem; border-radius: 30px;">
+                <div class="avatar">A</div>
+                <div style="margin-right: 10px;">
+                    <p style="font-weight: 600; font-size: 0.9rem;">Admin Khos</p>
+                    <p style="font-size: 0.75rem; color: var(--text-gray);">ผู้ดูแลระบบ</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filters & Export -->
+        <div class="glass" style="padding: 1.5rem; display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px;">
+                <label style="display: block; font-size: 0.85rem; margin-bottom: 5px; color: var(--text-dark); font-weight: 500;">เดือน</label>
+                <input type="month" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;" value="2026-05">
+            </div>
+            <div style="flex: 1; min-width: 150px;">
+                <label style="display: block; font-size: 0.85rem; margin-bottom: 5px; color: var(--text-dark); font-weight: 500;">แผนก</label>
+                <select class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                    <option value="">ทุกแผนก</option>
+                    <option value="er">แผนกฉุกเฉิน (ER)</option>
+                    <option value="opd">ผู้ป่วยนอก (OPD)</option>
+                </select>
+            </div>
+            <button style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt'; min-width: 100px;">
+                <i class="fa-solid fa-magnifying-glass"></i> ค้นหา
+            </button>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%; margin-top: 10px;">
+                <button style="flex: 1; padding: 10px 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt';">
+                    <i class="fa-solid fa-file-pdf"></i> Export PDF
+                </button>
+                <button style="flex: 1; padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt';">
+                    <i class="fa-solid fa-file-excel"></i> Export Excel
+                </button>
+            </div>
+        </div>
+
+        <!-- Report Table -->
+        <section class="recent-activity glass">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>รหัสพนักงาน</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>มาปกติ (วัน)</th>
+                            <th>สาย (ครั้ง)</th>
+                            <th>ขาด/ลา (วัน)</th>
+                            <th>รวมชั่วโมงโอที (OT)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>EMP001</td>
+                            <td>นาย สมชาย ใจดี</td>
+                            <td>20</td>
+                            <td><span style="color: var(--danger); font-weight: bold;">2</span></td>
+                            <td>0</td>
+                            <td>12.5</td>
+                        </tr>
+                        <tr>
+                            <td>EMP002</td>
+                            <td>นางสาว มาลี ศรีเมือง</td>
+                            <td>21</td>
+                            <td>0</td>
+                            <td>1</td>
+                            <td>5.0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

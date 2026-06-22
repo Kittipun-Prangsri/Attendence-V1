@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Attendance | ตารางเวร</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .calendar-container {
+            margin-top: 2rem;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: var(--primary-light);
+            color: var(--dark);
+        }
+        .calendar-nav button {
+            background: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--primary);
+            transition: 0.3s;
+        }
+        .calendar-nav button:hover {
+            background: var(--primary);
+            color: white;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-top: 1px solid #eee;
+        }
+        .calendar-day-header {
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-gray);
+            border-bottom: 1px solid #eee;
+            border-right: 1px solid #eee;
+        }
+        .calendar-cell {
+            min-height: 120px;
+            padding: 10px;
+            border-right: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+        .calendar-cell:nth-child(7n) {
+            border-right: none;
+        }
+        .date-number {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .calendar-cell.today .date-number {
+            background: var(--primary);
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+        }
+        .shift-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            display: block;
+            color: white;
+        }
+        .shift-morning { background: #4ea8de; }
+        .shift-afternoon { background: #f8961e; }
+        .shift-night { background: #5390d9; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar glass">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-hospital-user"></i>
+            </div>
+            <h2>Attendente</h2>
+        </div>
+        <ul class="nav-links">
+            <a href="/" class="nav-item">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>แดชบอร์ด</span>
+            </a>
+            <a href="/schedule.html" class="nav-item active">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>ตารางเวร</span>
+            </a>
+            <a href="/reports.html" class="nav-item">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>รายงานประจำเดือน</span>
+            </a>
+            <a href="/login.html" class="nav-item" style="margin-top: auto;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>ออกจากระบบ</span>
+            </a>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1>ตารางเวรการปฏิบัติงาน</h1>
+                <p style="color: var(--text-gray); margin-top: 5px;">จัดการและดูตารางเวรของบุคลากร</p>
+            </div>
+            <div class="user-profile glass" style="padding: 0.5rem 1rem; border-radius: 30px;">
+                <div class="avatar">A</div>
+                <div style="margin-right: 10px;">
+                    <p style="font-weight: 600; font-size: 0.9rem;">Admin Khos</p>
+                    <p style="font-size: 0.75rem; color: var(--text-gray);">ผู้ดูแลระบบ</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filters -->
+        <div class="glass" style="padding: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <select class="form-control" style="flex: 1; min-width: 150px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <option value="">ทุกแผนก</option>
+                <option value="er">แผนกฉุกเฉิน (ER)</option>
+                <option value="opd">ผู้ป่วยนอก (OPD)</option>
+            </select>
+            <button style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt';">
+                <i class="fa-solid fa-filter"></i> กรองข้อมูล
+            </button>
+            <button style="padding: 10px 20px; background: var(--success); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt'; margin-left: auto;">
+                <i class="fa-solid fa-plus"></i> เพิ่มตารางเวร
+            </button>
+        </div>
+
+        <!-- Calendar -->
+        <div class="table-container">
+            <div class="calendar-container" style="min-width: 800px;">
+                <div class="calendar-header">
+...                <h2 style="font-size: 1.5rem; font-weight: 600;">พฤษภาคม 2026</h2>
+                <div class="calendar-nav">
+                    <button><i class="fa-solid fa-chevron-left"></i></button>
+                    <button style="margin-left: 5px;"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="calendar-grid">
+                <div class="calendar-day-header">อาทิตย์</div>
+                <div class="calendar-day-header">จันทร์</div>
+                <div class="calendar-day-header">อังคาร</div>
+                <div class="calendar-day-header">พุธ</div>
+                <div class="calendar-day-header">พฤหัสบดี</div>
+                <div class="calendar-day-header">ศุกร์</div>
+                <div class="calendar-day-header">เสาร์</div>
+                
+                <!-- Mock Calendar Days -->
+                <div class="calendar-cell"><span class="date-number" style="color: #ccc;">26</span></div>
+                <div class="calendar-cell"><span class="date-number" style="color: #ccc;">27</span></div>
+                <div class="calendar-cell"><span class="date-number" style="color: #ccc;">28</span></div>
+                <div class="calendar-cell"><span class="date-number" style="color: #ccc;">29</span></div>
+                <div class="calendar-cell"><span class="date-number" style="color: #ccc;">30</span></div>
+                <div class="calendar-cell"><span class="date-number">1</span>
+                    <span class="shift-badge shift-morning">เช้า (3 คน)</span>
+                    <span class="shift-badge shift-afternoon">บ่าย (2 คน)</span>
+                </div>
+                <div class="calendar-cell"><span class="date-number">2</span></div>
+                <!-- ... additional mock cells ... -->
+            </div>
+        </div>
+        </div>
+
+    </main>
+</body>
+</html>
