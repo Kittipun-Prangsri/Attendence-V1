@@ -1,0 +1,156 @@
+<!--
+  ปฏิทินเวร (Calendar Component) — แยกออกมาจาก schedule.html เพื่อนำไปใช้ในระบบอื่น
+
+  วิธีใช้งาน:
+  1. คัดลอกทั้งไฟล์นี้ไปวางในระบบใหม่ หรือคัดลอกเฉพาะส่วน <style> และ <div class="calendar-container">
+     ไปแปะในหน้าเว็บที่ต้องการ
+  2. ถ้าระบบใหม่มีตัวแปรสี (CSS variables) --primary, --primary-light, --dark, --text-dark, --text-gray, --success
+     อยู่แล้ว ให้ลบบล็อก :root ด้านล่างออก เพื่อไม่ให้ทับค่าดีไซน์เดิมของระบบนั้น
+  3. ฟอนต์ Prompt/Inter และไอคอน Font Awesome (fa-chevron-left/right) เป็นของเสริม
+     ถ้าไม่ต้องการพึ่งพา CDN ภายนอก ให้ลบ <link> สองบรรทัดด้านบน แล้วแทนปุ่มเปลี่ยนเดือนด้วยตัวอักษร ‹ ›
+  4. นี่คือ "ดีไซน์" เท่านั้น (โครง CSS/HTML) ยังไม่มี JavaScript คำนวณวันที่จริงหรือดึงข้อมูลเวรจาก API
+     ต้องเขียนสคริปต์เพิ่มเองเพื่อ:
+       - สร้างเซลล์ของแต่ละวันตามเดือน/ปีจริง (new Date(), getDay(), getDate() ฯลฯ)
+       - ใส่ class "today" ให้ .date-number ของวันปัจจุบัน
+       - เติม <span class="shift-badge shift-morning|shift-afternoon|shift-night"> ตามข้อมูลเวรจริง
+       - ผูก event ปุ่ม .calendar-nav button (ก่อนหน้า/ถัดไป) ให้เปลี่ยนเดือนที่แสดง
+-->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* ตัวแปรสีที่ปฏิทินนี้ต้องใช้ — ลบทิ้งได้ถ้าระบบปลายทางมีชุดสีของตัวเองอยู่แล้ว */
+    :root {
+        --primary: #0077b6;
+        --primary-light: #90e0ef;
+        --dark: #03045e;
+        --text-dark: #333333;
+        --text-gray: #666666;
+        --success: #2a9d8f;
+    }
+
+    .calendar-container {
+        margin-top: 2rem;
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        font-family: 'Prompt', 'Inter', sans-serif;
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        background: var(--primary-light);
+        color: var(--dark);
+    }
+    .calendar-header h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    .calendar-nav button {
+        background: white;
+        border: none;
+        width: 35px;
+        height: 35px;
+        border-radius: 8px;
+        cursor: pointer;
+        color: var(--primary);
+        transition: 0.3s;
+    }
+    .calendar-nav button:hover {
+        background: var(--primary);
+        color: white;
+    }
+    .calendar-nav button + button {
+        margin-left: 5px;
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        border-top: 1px solid #eee;
+    }
+    .calendar-day-header {
+        padding: 1rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-gray);
+        border-bottom: 1px solid #eee;
+        border-right: 1px solid #eee;
+    }
+    .calendar-cell {
+        min-height: 120px;
+        padding: 10px;
+        border-right: 1px solid #eee;
+        border-bottom: 1px solid #eee;
+        position: relative;
+    }
+    .calendar-cell:nth-child(7n) {
+        border-right: none;
+    }
+    .date-number {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 10px;
+        display: inline-block;
+    }
+    .calendar-cell.today .date-number {
+        background: var(--primary);
+        color: white;
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 25px;
+    }
+    .calendar-cell.other-month .date-number {
+        color: #ccc;
+    }
+    .shift-badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 4px;
+        display: block;
+        color: white;
+    }
+    .shift-morning { background: #4ea8de; }
+    .shift-afternoon { background: #f8961e; }
+    .shift-night { background: #5390d9; }
+</style>
+
+<div class="calendar-container">
+    <div class="calendar-header">
+        <h2 id="calendar-title">พฤษภาคม 2026</h2>
+        <div class="calendar-nav">
+            <button id="calendar-prev"><i class="fa-solid fa-chevron-left"></i></button>
+            <button id="calendar-next"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+    <div class="calendar-grid">
+        <div class="calendar-day-header">อาทิตย์</div>
+        <div class="calendar-day-header">จันทร์</div>
+        <div class="calendar-day-header">อังคาร</div>
+        <div class="calendar-day-header">พุธ</div>
+        <div class="calendar-day-header">พฤหัสบดี</div>
+        <div class="calendar-day-header">ศุกร์</div>
+        <div class="calendar-day-header">เสาร์</div>
+
+        <!-- ตัวอย่างโครงเซลล์ 1 สัปดาห์ (ทำซ้ำแพทเทิร์นนี้ให้ครบ 5-6 แถวตามจำนวนวันของเดือน) -->
+        <div class="calendar-cell other-month"><span class="date-number">26</span></div>
+        <div class="calendar-cell other-month"><span class="date-number">27</span></div>
+        <div class="calendar-cell other-month"><span class="date-number">28</span></div>
+        <div class="calendar-cell other-month"><span class="date-number">29</span></div>
+        <div class="calendar-cell other-month"><span class="date-number">30</span></div>
+        <div class="calendar-cell today">
+            <span class="date-number">1</span>
+            <span class="shift-badge shift-morning">เช้า (3 คน)</span>
+            <span class="shift-badge shift-afternoon">บ่าย (2 คน)</span>
+        </div>
+        <div class="calendar-cell">
+            <span class="date-number">2</span>
+            <span class="shift-badge shift-night">ดึก (1 คน)</span>
+        </div>
+    </div>
+</div>

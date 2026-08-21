@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  attendance-api:
+    build: .
+    container_name: attendance-api
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    env_file:
+      - .env
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - attendance-api

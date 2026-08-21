@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const db = require('../config/db');
-
-// --- Mock API endpoints for the Frontend ---
+const { verifyPassword, hashPassword } = require('../utils/password');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
 // Login Authentication Endpoint
 router.post('/auth/login', async (req, res) => {
@@ -12,25 +13,43 @@ router.post('/auth/login', async (req, res) => {
             return res.status(400).json({ success: false, error: 'กรุณาระบุชื่อและรหัสผ่าน' });
         }
 
-        if (password !== 'user123') {
-            return res.status(401).json({ success: false, error: 'รหัสผ่านไม่ถูกต้อง' });
-        }
-
         const query = `
-            SELECT HR_FNAME, HR_LNAME, USER_TYPE, FINGLE_ID 
-            FROM hr_person 
+            SELECT ID, HR_FNAME, HR_LNAME, USER_TYPE, FINGLE_ID, HR_PASSWORD, HR_PASSWORD_HASH
+            FROM hr_person
             WHERE HR_CID = ?
             LIMIT 1
         `;
         const [rows] = await db.query(query, [username]);
 
         if (rows.length === 0) {
-            return res.status(401).json({ success: false, error: 'ไม่พบชื่อผู้ใช้งานนี้ในระบบ' });
+            return res.status(401).json({ success: false, error: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
         }
 
         const user = rows[0];
+        const { valid, needsUpgrade } = await verifyPassword(password, {
+            hash: user.HR_PASSWORD_HASH,
+            legacyMd5: user.HR_PASSWORD
+        });
+
+        if (!valid) {
+            return res.status(401).json({ success: false, error: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
+        }
+
+        if (needsUpgrade) {
+            hashPassword(password)
+                .then(newHash => db.query('UPDATE hr_person SET HR_PASSWORD_HASH = ? WHERE ID = ?', [newHash, user.ID]))
+                .catch(err => console.warn('Warning: Could not upgrade password hash for user', user.ID, err.message));
+        }
+
+        const token = jwt.sign(
+            { sub: user.ID, empId: user.FINGLE_ID, name: `${user.HR_FNAME} ${user.HR_LNAME}`, role: user.USER_TYPE },
+            process.env.JWT_SECRET,
+            { expiresIn: '12h' }
+        );
+
         res.json({
             success: true,
+            token,
             user: {
                 name: `${user.HR_FNAME} ${user.HR_LNAME}`,
                 role: user.USER_TYPE,
@@ -44,55 +63,57 @@ router.post('/auth/login', async (req, res) => {
 });
 
 // Get Dashboard Stats
-router.get('/dashboard/stats', async (req, res) => {
+router.get('/dashboard/stats', authenticateToken, requireRole('SUPER', 'ADMIN'), async (req, res) => {
     try {
         const lateTime = req.query.lateTime || '08:30';
         const lateTimeSql = lateTime + ':00'; // e.g., '08:30:00'
 
-        // 1. Total Employees (นับ FINGLE_ID จาก HR_Person)
+        // 1. Total Employees (นับ FINGLE_ID จาก hr_person)
         let total = 0;
         try {
-            const [[resultTotal]] = await db.query(`SELECT COUNT(FINGLE_ID) as total FROM HR_Person`);
+            const [[resultTotal]] = await db.query(`SELECT COUNT(FINGLE_ID) as total FROM hr_person`);
             total = resultTotal.total;
         } catch (e) {
-            console.warn('Warning: Could not count HR_Person', e.message);
+            console.warn('Warning: Could not count hr_person', e.message);
         }
-        
+
         // 2. Present Today (Check-ins today)
         const [[{ present }]] = await db.query(`
             SELECT COUNT(DISTINCT EmployeeID) as present 
             FROM hikvision 
             WHERE AccessDate = CURDATE() AND AttendanceStatus = 'i'
         `);
-        
+
         // 3. Late Today (ใช้เวลาจาก lateTimeSql แทนเวลาตายตัว)
         const [[{ late }]] = await db.query(`
             SELECT COUNT(DISTINCT EmployeeID) as late 
             FROM hikvision 
             WHERE AccessDate = CURDATE() AND AttendanceStatus = 'i' AND AccessTime > ?
         `, [lateTimeSql]);
-        
+
         // 4. Absent/Leave Today (ดึงจาก 3 ตารางใหม่ ตามโครงสร้าง year_and_month และ di1-di31)
         let absent = 0;
         try {
             const today = new Date();
             // สร้าง format เช่น '2026-05'
             const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-            // หาวันที่ เพื่อไปแมตช์กับคอลัมน์ di1 ถึง di31
-            const day = today.getDate(); 
-            const col = `di${day}`;
+            // หาวันที่ เพื่อไปแมตช์กับคอลัมน์ di1 ถึง di31 ของแต่ละตาราง
+            const day = today.getDate();
+            const colMorning = `di${day}`;
+            const colNight = `d${day}`;
+            const colAfternoon = `do${day}`;
 
             // นับคนที่คอลัมน์วันนี้มีคำว่า 'ลา' หรือ 'ขาด'
             const absentQuery = `
                 SELECT COUNT(DISTINCT hr_person_id) as absentCount FROM (
                     SELECT hr_person_id FROM service_work_scans_morning 
-                    WHERE year_and_month = ? AND (${col} LIKE '%ลา%' OR ${col} LIKE '%ขาด%')
+                    WHERE year_and_month = ? AND (${colMorning} LIKE '%ลา%' OR ${colMorning} LIKE '%ขาด%')
                     UNION
                     SELECT hr_person_id FROM service_work_scans_night 
-                    WHERE year_and_month = ? AND (${col} LIKE '%ลา%' OR ${col} LIKE '%ขาด%')
+                    WHERE year_and_month = ? AND (${colNight} LIKE '%ลา%' OR ${colNight} LIKE '%ขาด%')
                     UNION
                     SELECT hr_person_id FROM service_work_scans_afternoon 
-                    WHERE year_and_month = ? AND (${col} LIKE '%ลา%' OR ${col} LIKE '%ขาด%')
+                    WHERE year_and_month = ? AND (${colAfternoon} LIKE '%ลา%' OR ${colAfternoon} LIKE '%ขาด%')
                 ) as leaves
             `;
             const [[{ absentCount }]] = await db.query(absentQuery, [yearMonth, yearMonth, yearMonth]);
@@ -100,7 +121,7 @@ router.get('/dashboard/stats', async (req, res) => {
         } catch (dbErr) {
             console.warn('Warning: Could not fetch from service_work_scans_*', dbErr.message);
         }
-        
+
         res.json({
             total: total || 0,
             present: present || 0,
@@ -114,7 +135,7 @@ router.get('/dashboard/stats', async (req, res) => {
 });
 
 // Get recent activity
-router.get('/attendance/recent', async (req, res) => {
+router.get('/attendance/recent', authenticateToken, requireRole('SUPER', 'ADMIN'), async (req, res) => {
     try {
         const limitParam = parseInt(req.query.limit, 10);
         const limit = isNaN(limitParam) ? 10 : limitParam;
@@ -156,12 +177,12 @@ router.get('/attendance/recent', async (req, res) => {
             const [fallbackRows] = await db.query(fallbackQuery, [limit]);
             rows = fallbackRows;
         }
-        
+
         // Format data for frontend
         const formattedData = rows.map(row => {
             let statusBadge = 'status-in';
             let statusText = 'เข้างานปกติ';
-            
+
             if (row.AttendanceStatus === 'o') {
                 statusBadge = 'status-leave';
                 statusText = 'ออกงาน';
@@ -191,7 +212,7 @@ router.get('/attendance/recent', async (req, res) => {
 router.post('/attendance/record', async (req, res) => {
     try {
         const { empId, type } = req.body;
-        
+
         if (!empId || !type) {
             return res.status(400).json({ error: 'กรุณาระบุรหัสพนักงาน' });
         }
@@ -216,9 +237,9 @@ router.post('/attendance/record', async (req, res) => {
                 if (secondsAgo !== null && secondsAgo < COOLDOWN_SECONDS) {
                     const remainingSeconds = COOLDOWN_SECONDS - secondsAgo;
                     const remainingMins = Math.ceil(remainingSeconds / 60);
-                    return res.status(400).json({ 
-                        success: false, 
-                        error: `สแกนซ้ำซ้อน! พนักงานรหัส ${empId} เพิ่งทำการบันทึกเวลาไปเมื่อ ${lastScanRows[0].AccessTime} (กรุณารออีก ${remainingSeconds} วินาที หรือประมาณ ${remainingMins} นาที)` 
+                    return res.status(400).json({
+                        success: false,
+                        error: `สแกนซ้ำซ้อน! พนักงานรหัส ${empId} เพิ่งทำการบันทึกเวลาไปเมื่อ ${lastScanRows[0].AccessTime} (กรุณารออีก ${remainingSeconds} วินาที หรือประมาณ ${remainingMins} นาที)`
                     });
                 }
             }
@@ -243,13 +264,15 @@ router.post('/attendance/record', async (req, res) => {
         // 2. ตรวจสอบปริมาณการสแกน หากมากเกินไป ให้สุ่มหาเครื่องที่ว่าง (Load Balance)
         let activeDevice = { name: 'KHHin1', serial: 'AX6425372', reader: 'Cardreader 01' };
         const TRAFFIC_THRESHOLD = 5; // จำนวนการสแกนใน 1 นาทีล่าสุดที่ถือว่าหนาแน่น
-        
+
         try {
             // นับการสแกนใน 1 นาทีล่าสุด
             const trafficQuery = `
                 SELECT COUNT(*) AS scan_count 
                 FROM hikvision 
-                WHERE STR_TO_DATE(AccessDateandTime, '%Y-%m-%dT%H:%i:%s') >= NOW() - INTERVAL 1 MINUTE
+                WHERE STR_TO_DATE(AccessDateandTime, '%Y-%m-%dT%H:%i:%s')
+                
+                >= NOW() - INTERVAL 1 MINUTE
             `;
             const [[trafficResult]] = await db.query(trafficQuery);
             const scanCount = trafficResult ? trafficResult.scan_count : 0;
@@ -303,13 +326,13 @@ router.post('/attendance/record', async (req, res) => {
                 ?, 0
             )
         `;
-        
+
         const [result] = await db.query(insertQuery, [
-            empId, 
+            empId,
             activeDevice.name,
             activeDevice.serial,
             activeDevice.reader,
-            nextCardNumberStr, 
+            nextCardNumberStr,
             attendanceStatus
         ]);
 

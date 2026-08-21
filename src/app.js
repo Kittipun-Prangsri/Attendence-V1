@@ -11,12 +11,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const apiRoutes = require('./routes/api');
+const personnelRoutes = require('./routes/personnel');
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
 app.use('/api', apiRoutes);
+app.use('/api/personnel', personnelRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {

@@ -20,16 +20,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide stats cards
         const statsRow = document.querySelector('.stats-row');
         if (statsRow) statsRow.style.display = 'none';
-        
+
         // Hide recent activity table
         const recentActivity = document.querySelector('.recent-activity');
         if (recentActivity) recentActivity.style.display = 'none';
-        
+
         // Hide extra sidebar menus (Keep Dashboard and Logout)
         const navItems = document.querySelectorAll('.nav-item');
         navItems.forEach(item => {
             const text = item.textContent.trim();
-            if (!text.includes('หน้าหลัก') && !text.includes('ออกจากระบบ')) {
+            if (!text.includes('แดชบอร์ด') && !text.includes('ออกจากระบบ')) {
                 item.style.display = 'none';
             }
         });
@@ -52,6 +52,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Scroll Top Button
     initScrollTop();
 });
+
+// Attaches the JWT from login to protected API calls; redirects to login on 401
+async function authFetch(url, options = {}) {
+    const token = localStorage.getItem('token');
+    const headers = { ...(options.headers || {}) };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(url, { ...options, headers });
+
+    if (response.status === 401) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+        throw new Error('Session expired');
+    }
+
+    return response;
+}
 
 function initScrollTop() {
     // Create button element
@@ -81,14 +99,17 @@ function initScrollTop() {
 
 async function fetchDashboardData() {
     try {
+        const statTotal = document.getElementById('stat-total');
+        if (!statTotal) return; // Not on a page with dashboard stats
+
         const lateTimeInput = document.getElementById('late-time-input');
         const lateTime = lateTimeInput ? lateTimeInput.value : '08:30';
-        
-        const response = await fetch(`/api/dashboard/stats?lateTime=${lateTime}`);
+
+        const response = await authFetch(`/api/dashboard/stats?lateTime=${lateTime}`);
         const data = await response.json();
-        
+
         // Update DOM elements
-        document.getElementById('stat-total').textContent = data.total || 0;
+        statTotal.textContent = data.total || 0;
         document.getElementById('stat-present').textContent = data.present || 0;
         document.getElementById('stat-late').textContent = data.late || 0;
         document.getElementById('stat-absent').textContent = data.absent || 0;
@@ -103,7 +124,7 @@ async function fetchRecentActivity() {
         const limitSelect = document.getElementById('limit-select');
         const limit = limitSelect ? limitSelect.value : 10;
         
-        const response = await fetch(`/api/attendance/recent?limit=${limit}`);
+        const response = await authFetch(`/api/attendance/recent?limit=${limit}`);
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         

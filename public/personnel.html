@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Attendance | จัดการบุคลากร</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .status-enrolled { background: rgba(42, 157, 143, 0.1); color: var(--success); }
+        .status-unenrolled { background: rgba(230, 57, 70, 0.1); color: var(--danger); }
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Prompt';
+            font-size: 0.8rem;
+            margin-right: 6px;
+            white-space: nowrap;
+        }
+        .action-btn.enroll { background: var(--success); color: white; }
+        .action-btn.unenroll { background: var(--danger); color: white; }
+        .action-btn.reset { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar glass">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-hospital-user"></i>
+            </div>
+            <h2>Attendente</h2>
+        </div>
+        <ul class="nav-links">
+            <a href="/" class="nav-item">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>แดชบอร์ด</span>
+            </a>
+            <a href="/schedule.html" class="nav-item">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>ตารางเวร</span>
+            </a>
+            <a href="/reports.html" class="nav-item">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>รายงานประจำเดือน</span>
+            </a>
+            <a href="/personnel.html" class="nav-item active">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>จัดการบุคลากร</span>
+            </a>
+            <a href="/login.html" class="nav-item" style="margin-top: auto;" onclick="localStorage.removeItem('user'); localStorage.removeItem('token')">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>ออกจากระบบ</span>
+            </a>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1>จัดการบุคลากร</h1>
+                <p style="color: var(--text-gray); margin-top: 5px;">ลงทะเบียน/ยกเลิกการสแกนนิ้ว และตั้งรหัสผ่านสำหรับพนักงานที่มีอยู่ในระบบ HR</p>
+            </div>
+            <div class="user-profile glass" style="padding: 0.5rem 1rem; border-radius: 30px;">
+                <div class="avatar">A</div>
+                <div style="margin-right: 10px;">
+                    <p style="font-weight: 600; font-size: 0.9rem;" id="profile-name">Admin</p>
+                    <p style="font-size: 0.75rem; color: var(--text-gray);" id="profile-role">ผู้ดูแลระบบ</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filters -->
+        <div class="glass" style="padding: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 2rem;">
+            <input type="text" id="search-input" class="form-control" placeholder="ค้นหาชื่อ หรือเลขบัตรประชาชน" style="flex: 2; min-width: 200px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+            <select id="dept-filter" class="form-control" style="flex: 1; min-width: 160px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <option value="">ทุกแผนก</option>
+            </select>
+            <select id="status-filter" class="form-control" style="flex: 1; min-width: 160px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <option value="">ทุกสถานะ</option>
+                <option value="enrolled">ลงทะเบียนสแกนนิ้วแล้ว</option>
+                <option value="unenrolled">ยังไม่ลงทะเบียน</option>
+            </select>
+            <button id="btn-search" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt';">
+                <i class="fa-solid fa-magnifying-glass"></i> ค้นหา
+            </button>
+        </div>
+
+        <!-- Table -->
+        <section class="recent-activity glass">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>รหัสสแกนนิ้ว (FINGLE_ID)</th>
+                            <th>เลขบัตรประชาชน</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>แผนก</th>
+                            <th>สถานะ</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="personnel-table">
+                        <tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-gray);">กำลังโหลดข้อมูล...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = '/login.html';
+                return;
+            }
+            const user = JSON.parse(userStr);
+            if (user.role !== 'SUPER') {
+                window.location.href = '/index.html';
+                return;
+            }
+
+            document.getElementById('profile-name').textContent = user.name;
+            document.getElementById('profile-role').textContent = 'ผู้ดูแลระบบ (Admin)';
+
+            loadDepartments();
+            loadPersonnel();
+
+            document.getElementById('btn-search').addEventListener('click', loadPersonnel);
+        });
+
+        async function loadDepartments() {
+            try {
+                const response = await authFetch('/api/personnel/departments');
+                const depts = await response.json();
+                const select = document.getElementById('dept-filter');
+                depts.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.HR_DEPARTMENT_ID;
+                    opt.textContent = d.HR_DEPARTMENT_NAME;
+                    select.appendChild(opt);
+                });
+            } catch (error) {
+                console.error('Error loading departments:', error);
+            }
+        }
+
+        async function loadPersonnel() {
+            const tbody = document.getElementById('personnel-table');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-gray);">กำลังโหลดข้อมูล...</td></tr>';
+
+            try {
+                const search = document.getElementById('search-input').value.trim();
+                const dept = document.getElementById('dept-filter').value;
+                const status = document.getElementById('status-filter').value;
+
+                const params = new URLSearchParams();
+                if (search) params.set('search', search);
+                if (dept) params.set('dept', dept);
+                if (status) params.set('status', status);
+
+                const response = await authFetch(`/api/personnel?${params.toString()}`);
+                if (!response.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
+                const rows = await response.json();
+
+                if (rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-gray);">ไม่พบข้อมูล</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                rows.forEach(row => {
+                    const enrolled = !!row.FINGLE_ID;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.FINGLE_ID || '-'}</td>
+                        <td>${row.HR_CID || '-'}</td>
+                        <td>${row.HR_FNAME} ${row.HR_LNAME}</td>
+                        <td>${row.HR_DEPARTMENT_NAME || 'ไม่ระบุแผนก'}</td>
+                        <td><span class="status-badge ${enrolled ? 'status-enrolled' : 'status-unenrolled'}">${enrolled ? 'ลงทะเบียนแล้ว' : 'ยังไม่ลงทะเบียน'}</span></td>
+                        <td></td>
+                    `;
+                    const actionsCell = tr.lastElementChild;
+                    if (enrolled) {
+                        actionsCell.appendChild(makeActionButton('unenroll', 'ยกเลิกการลงทะเบียน', () => unenroll(row.ID)));
+                    } else {
+                        actionsCell.appendChild(makeActionButton('enroll', 'ลงทะเบียนสแกนนิ้ว', () => enroll(row.ID)));
+                    }
+                    actionsCell.appendChild(makeActionButton('reset', 'ตั้งรหัสผ่านใหม่', () => resetPassword(row.ID)));
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Error loading personnel:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+            }
+        }
+
+        function makeActionButton(cls, label, onClick) {
+            const btn = document.createElement('button');
+            btn.className = `action-btn ${cls}`;
+            btn.textContent = label;
+            btn.addEventListener('click', onClick);
+            return btn;
+        }
+
+        async function enroll(id) {
+            const fingleId = prompt('ระบุรหัสเครื่องสแกน (FINGLE_ID) สำหรับพนักงานคนนี้:');
+            if (!fingleId || !fingleId.trim()) return;
+
+            let initialPassword = null;
+            if (confirm('ต้องการตั้งรหัสผ่านเริ่มต้นสำหรับเข้าสู่ระบบด้วยหรือไม่?')) {
+                initialPassword = prompt('ระบุรหัสผ่านเริ่มต้น (อย่างน้อย 6 ตัวอักษร):');
+                if (!initialPassword) initialPassword = null;
+            }
+
+            try {
+                const response = await authFetch(`/api/personnel/${id}/enroll`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fingleId: fingleId.trim(), initialPassword })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + data.message);
+                    loadPersonnel();
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error enrolling:', error);
+            }
+        }
+
+        async function unenroll(id) {
+            if (!confirm('ยืนยันยกเลิกการลงทะเบียนสแกนนิ้วของพนักงานคนนี้? (สามารถลงทะเบียนใหม่ได้ในภายหลัง)')) return;
+
+            try {
+                const response = await authFetch(`/api/personnel/${id}/unenroll`, { method: 'PUT' });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + data.message);
+                    loadPersonnel();
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error unenrolling:', error);
+            }
+        }
+
+        async function resetPassword(id) {
+            const newPassword = prompt('ระบุรหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร):');
+            if (!newPassword) return;
+
+            try {
+                const response = await authFetch(`/api/personnel/${id}/reset-password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error resetting password:', error);
+            }
+        }
+    </script>
+</body>
+</html>
