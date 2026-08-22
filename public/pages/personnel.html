@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Attendance | จัดการบุคลากร</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        th.filterable {
+            position: relative;
+        }
+        .th-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .th-filter-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-gray);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            transition: color 0.2s, background 0.2s;
+        }
+        .th-filter-btn:hover {
+            color: var(--primary);
+            background: rgba(0, 119, 182, 0.1);
+        }
+        .th-filter-btn.active {
+            color: var(--primary);
+        }
+        .filter-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            z-index: 20;
+            width: 220px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 10px;
+            font-weight: 400;
+            text-transform: none;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+        }
+        .filter-panel-search {
+            width: 100%;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-family: 'Prompt';
+            outline: none;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
+        .filter-panel-list {
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            padding: 6px 0;
+            margin-bottom: 8px;
+        }
+        .filter-panel-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 4px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .filter-panel-item:hover {
+            background: rgba(0, 119, 182, 0.06);
+        }
+        .filter-panel-item input {
+            cursor: pointer;
+        }
+        .filter-panel-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .filter-panel-btn {
+            flex: 1;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-family: 'Prompt';
+            font-size: 0.85rem;
+        }
+        .filter-panel-btn.secondary {
+            background: #f1f1f1;
+            color: var(--text-dark);
+        }
+        .filter-panel-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar glass">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-hospital-user"></i>
+            </div>
+            <h2>Attendente</h2>
+        </div>
+        <ul class="nav-links">
+            <a href="/" class="nav-item">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>แดชบอร์ด</span>
+            </a>
+            <a href="/pages/schedule.html" class="nav-item">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>ตารางเวร</span>
+            </a>
+            <a href="/pages/reports.html" class="nav-item">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>รายงานประจำเดือน</span>
+            </a>
+            <a href="/pages/personnel.html" class="nav-item active">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>จัดการบุคลากร</span>
+            </a>
+            <a href="/pages/login.html" class="nav-item" style="margin-top: auto;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>ออกจากระบบ</span>
+            </a>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1>จัดการบุคลากร</h1>
+                <p style="color: var(--text-gray); margin-top: 5px;">รายชื่อบุคลากรทั้งหมดในระบบ</p>
+            </div>
+            <div class="user-profile glass" style="padding: 0.5rem 1rem; border-radius: 30px;">
+                <div class="avatar">A</div>
+                <div style="margin-right: 10px;">
+                    <p style="font-weight: 600; font-size: 0.9rem;">Admin Khos</p>
+                    <p style="font-size: 0.75rem; color: var(--text-gray);">ผู้ดูแลระบบ</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search -->
+        <div class="glass" style="padding: 1.5rem; display: flex; gap: 1rem; align-items: center; margin-bottom: 2rem;">
+            <input type="text" id="search-input" placeholder="ค้นหาชื่อ, รหัสพนักงาน, เลขบัตรประชาชน หรือแผนก..." style="flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Prompt'; outline: none;">
+            <button id="clear-filters-btn" style="display: none; padding: 10px 16px; background: #f1f1f1; color: var(--text-dark); border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt'; white-space: nowrap;">
+                <i class="fa-solid fa-filter-circle-xmark"></i> ล้างตัวกรอง
+            </button>
+            <button id="open-flex-modal-btn" style="padding: 10px 16px; background: #06c755; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Prompt'; white-space: nowrap; font-weight: 600; box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);">
+                <i class="fa-brands fa-line"></i> สร้าง LINE Flex Card
+            </button>
+            <span id="employee-count" style="color: var(--text-gray); font-size: 0.9rem; white-space: nowrap;"></span>
+        </div>
+
+        <!-- Personnel Table -->
+        <section class="recent-activity glass">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="filterable" data-key="empId">
+                            <div class="th-content"><span>รหัสพนักงาน</span><button class="th-filter-btn" data-key="empId" title="กรองข้อมูล"><i class="fa-solid fa-filter"></i></button></div>
+                        </th>
+                        <th class="filterable" data-key="cid">
+                            <div class="th-content"><span>เลขบัตรประชาชน</span><button class="th-filter-btn" data-key="cid" title="กรองข้อมูล"><i class="fa-solid fa-filter"></i></button></div>
+                        </th>
+                        <th class="filterable" data-key="name">
+                            <div class="th-content"><span>ชื่อ-นามสกุล</span><button class="th-filter-btn" data-key="name" title="กรองข้อมูล"><i class="fa-solid fa-filter"></i></button></div>
+                        </th>
+                        <th class="filterable" data-key="department">
+                            <div class="th-content"><span>แผนก</span><button class="th-filter-btn" data-key="department" title="กรองข้อมูล"><i class="fa-solid fa-filter"></i></button></div>
+                        </th>
+                        <th class="filterable" data-key="role">
+                            <div class="th-content"><span>ตำแหน่ง</span><button class="th-filter-btn" data-key="role" title="กรองข้อมูล"><i class="fa-solid fa-filter"></i></button></div>
+                        </th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="personnel-table">
+                    <tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-gray);">กำลังโหลดข้อมูล...</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        let allEmployees = [];
+        const activeFilters = { empId: null, cid: null, name: null, department: null, role: null };
+
+        function renderEmployees(list) {
+            const tbody = document.getElementById('personnel-table');
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 6;
+                td.style.cssText = 'text-align: center; padding: 2rem; color: var(--text-gray);';
+                td.textContent = 'ไม่พบข้อมูลบุคลากร';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                return;
+            }
+
+            list.forEach(emp => {
+                const tr = document.createElement('tr');
+                const cell = (text) => {
+                    const td = document.createElement('td');
+                    td.textContent = text;
+                    return td;
+                };
+                tr.appendChild(cell(emp.empId || '-'));
+                tr.appendChild(cell(emp.cid || '-'));
+                tr.appendChild(cell(emp.name));
+                tr.appendChild(cell(emp.department));
+                tr.appendChild(cell(emp.role));
+
+                const actionsTd = document.createElement('td');
+                actionsTd.style.cssText = 'display: flex; gap: 6px;';
+
+                const checkInBtn = document.createElement('button');
+                checkInBtn.className = 'btn-mini btn-checkin';
+                checkInBtn.title = 'Check-in';
+                checkInBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i>';
+                checkInBtn.disabled = !emp.empId;
+                checkInBtn.addEventListener('click', () => recordAttendanceFor(emp.empId, emp.name, 'check-in'));
+
+                const checkOutBtn = document.createElement('button');
+                checkOutBtn.className = 'btn-mini btn-checkout';
+                checkOutBtn.title = 'Check-out';
+                checkOutBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i>';
+                checkOutBtn.disabled = !emp.empId;
+                checkOutBtn.addEventListener('click', () => recordAttendanceFor(emp.empId, emp.name, 'check-out'));
+
+                const flexBtn = document.createElement('button');
+                flexBtn.className = 'btn-mini btn-flex';
+                flexBtn.title = 'สร้าง LINE Flex Card';
+                flexBtn.innerHTML = '<i class="fa-brands fa-line"></i>';
+                flexBtn.addEventListener('click', () => openFlexModal(emp));
+
+                actionsTd.appendChild(checkInBtn);
+                actionsTd.appendChild(checkOutBtn);
+                actionsTd.appendChild(flexBtn);
+                tr.appendChild(actionsTd);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function fetchEmployees() {
+            try {
+                const response = await fetch('/api/employees');
+                if (!response.ok) throw new Error('Network response was not ok');
+                allEmployees = await response.json();
+                applyFilters();
+            } catch (error) {
+                console.error('Error fetching employees:', error);
+                const tbody = document.getElementById('personnel-table');
+                tbody.innerHTML = '';
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 6;
+                td.style.cssText = 'text-align: center; padding: 2rem; color: var(--danger);';
+                td.textContent = 'ไม่สามารถโหลดข้อมูลบุคลากรได้';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
+        }
+
+        function getFilteredEmployees() {
+            const term = document.getElementById('search-input').value.trim().toLowerCase();
+            return allEmployees.filter(emp => {
+                const matchesSearch = !term ||
+                    (emp.name || '').toLowerCase().includes(term) ||
+                    (emp.empId || '').toLowerCase().includes(term) ||
+                    (emp.cid || '').toLowerCase().includes(term) ||
+                    (emp.department || '').toLowerCase().includes(term);
+                if (!matchesSearch) return false;
+
+                for (const key of Object.keys(activeFilters)) {
+                    const set = activeFilters[key];
+                    if (set && !set.has(String(emp[key] ?? '-'))) return false;
+                }
+                return true;
+            });
+        }
+
+        function applyFilters() {
+            const filtered = getFilteredEmployees();
+            renderEmployees(filtered);
+            document.getElementById('employee-count').textContent = `แสดง ${filtered.length} จาก ${allEmployees.length} คน`;
+
+            const anyActive = Object.values(activeFilters).some(v => v !== null);
+            document.getElementById('clear-filters-btn').style.display = anyActive ? '' : 'none';
+
+            document.querySelectorAll('.th-filter-btn').forEach(btn => {
+                const key = btn.dataset.key;
+                btn.classList.toggle('active', activeFilters[key] !== null);
+            });
+        }
+
+        document.getElementById('search-input').addEventListener('input', applyFilters);
+
+        document.getElementById('clear-filters-btn').addEventListener('click', () => {
+            Object.keys(activeFilters).forEach(key => { activeFilters[key] = null; });
+            document.getElementById('search-input').value = '';
+            closeAllFilterPanels();
+            applyFilters();
+        });
+
+        function closeAllFilterPanels() {
+            document.querySelectorAll('.filter-panel').forEach(p => p.remove());
+        }
+
+        function buildFilterPanel(key) {
+            const panel = document.createElement('div');
+            panel.className = 'filter-panel';
+
+            const uniqueValues = [...new Set(allEmployees.map(e => String(e[key] ?? '-')))]
+                .sort((a, b) => a.localeCompare(b, 'th'));
+
+            const searchBox = document.createElement('input');
+            searchBox.type = 'text';
+            searchBox.placeholder = 'ค้นหา...';
+            searchBox.className = 'filter-panel-search';
+            panel.appendChild(searchBox);
+
+            const listWrap = document.createElement('div');
+            listWrap.className = 'filter-panel-list';
+
+            const selectAllLabel = document.createElement('label');
+            selectAllLabel.className = 'filter-panel-item';
+            const selectAllCb = document.createElement('input');
+            selectAllCb.type = 'checkbox';
+            selectAllLabel.appendChild(selectAllCb);
+            selectAllLabel.appendChild(document.createTextNode('เลือกทั้งหมด'));
+            listWrap.appendChild(selectAllLabel);
+
+            const checkboxes = [];
+            uniqueValues.forEach(val => {
+                const label = document.createElement('label');
+                label.className = 'filter-panel-item';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = val;
+                cb.checked = !activeFilters[key] || activeFilters[key].has(val);
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(val));
+                listWrap.appendChild(label);
+                checkboxes.push(cb);
+            });
+
+            selectAllCb.checked = checkboxes.every(cb => cb.checked);
+            selectAllCb.addEventListener('change', () => {
+                checkboxes.forEach(cb => {
+                    if (cb.closest('label').style.display !== 'none') cb.checked = selectAllCb.checked;
+                });
+            });
+
+            searchBox.addEventListener('input', () => {
+                const t = searchBox.value.trim().toLowerCase();
+                checkboxes.forEach(cb => {
+                    cb.closest('label').style.display = cb.value.toLowerCase().includes(t) ? '' : 'none';
+                });
+            });
+
+            panel.appendChild(listWrap);
+
+            const actions = document.createElement('div');
+            actions.className = 'filter-panel-actions';
+
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'filter-panel-btn secondary';
+            clearBtn.textContent = 'ล้าง';
+            clearBtn.addEventListener('click', () => {
+                activeFilters[key] = null;
+                applyFilters();
+                closeAllFilterPanels();
+            });
+
+            const applyBtn = document.createElement('button');
+            applyBtn.type = 'button';
+            applyBtn.className = 'filter-panel-btn primary';
+            applyBtn.textContent = 'ตกลง';
+            applyBtn.addEventListener('click', () => {
+                const checked = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
+                activeFilters[key] = (checked.length === uniqueValues.length) ? null : new Set(checked);
+                applyFilters();
+                closeAllFilterPanels();
+            });
+
+            actions.appendChild(clearBtn);
+            actions.appendChild(applyBtn);
+            panel.appendChild(actions);
+
+            panel.addEventListener('click', (e) => e.stopPropagation());
+
+            return panel;
+        }
+
+        document.querySelectorAll('.th-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const key = btn.dataset.key;
+                const th = btn.closest('th');
+                const existing = th.querySelector('.filter-panel');
+                if (existing) {
+                    existing.remove();
+                    return;
+                }
+                closeAllFilterPanels();
+                th.appendChild(buildFilterPanel(key));
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.filter-panel') && !e.target.closest('.th-filter-btn')) {
+                closeAllFilterPanels();
+            }
+        });
+
+        async function recordAttendanceFor(empId, name, type) {
+            if (!empId) return;
+            const actionLabel = type === 'check-in' ? 'เข้างาน' : 'ออกงาน';
+            if (!confirm(`ยืนยันบันทึกเวลา${actionLabel}ให้ "${name}" (${empId}) ?`)) return;
+
+            try {
+                const response = await fetch('/api/attendance/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ empId, type })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`✅ บันทึกเวลา${actionLabel}สำเร็จ!`);
+                } else {
+                    alert(`❌ เกิดข้อผิดพลาดจากฐานข้อมูล:\n${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error recording attendance:', error);
+                alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+            }
+        }
+
+        fetchEmployees();
+
+        // LINE Flex Modal Logic
+        const flexModal = document.getElementById('flex-modal');
+        document.getElementById('open-flex-modal-btn').addEventListener('click', () => openFlexModal(null));
+
+        async function openFlexModal(emp) {
+            const modal = document.getElementById('flex-modal');
+            const empId = emp ? (emp.empId || '') : '';
+            const fullname = emp ? (emp.name || '') : '';
+            
+            modal.style.display = 'flex';
+            document.getElementById('flex-emp-info').textContent = emp ? `พนักงาน: ${fullname} (${empId})` : 'รูปแบบทั่วไป (ยังไม่ระบุตัวบุคคล)';
+
+            try {
+                const url = `/api/flex/checkin-card?empId=${encodeURIComponent(empId)}&fullname=${encodeURIComponent(fullname)}`;
+                const response = await fetch(url);
+                const flexJson = await response.json();
+                document.getElementById('flex-json-code').textContent = JSON.stringify(flexJson, null, 2);
+            } catch (err) {
+                console.error('Failed to load Flex JSON:', err);
+                document.getElementById('flex-json-code').textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
+            }
+        }
+
+        function closeFlexModal() {
+            document.getElementById('flex-modal').style.display = 'none';
+        }
+
+        function copyFlexJson() {
+            const code = document.getElementById('flex-json-code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const copyBtn = document.getElementById('copy-flex-btn');
+                copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> คัดลอกเรียบร้อย!';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> คัดลอก Flex JSON';
+                }, 2000);
+            }).catch(err => {
+                alert('ไม่สามารถคัดลอกได้: ' + err);
+            });
+        }
+    </script>
+
+    <!-- Modal for LINE Flex JSON -->
+    <div id="flex-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(6px); z-index: 999; justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: white; border-radius: 20px; width: 100%; max-width: 650px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden;">
+            <div style="background: #06c755; padding: 20px 24px; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 4px;"><i class="fa-brands fa-line"></i> LINE Flex Message (Check-In / Check-Out)</h3>
+                    <p id="flex-emp-info" style="font-size: 0.85rem; opacity: 0.9;"></p>
+                </div>
+                <button onclick="closeFlexModal()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 20px; overflow-y: auto; flex: 1; background: #0f172a; color: #38bdf8;">
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 10px;">สามารถคัดลอก JSON ด้านล่างไปวางใน LINE Developers Console, LINE Official Account Rich Menu หรือ LINE Bot เพื่อส่งปุ่มกดลงเวลาให้พนักงานได้ทันที:</p>
+                <pre id="flex-json-code" style="font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; word-break: break-all; color: #a5f3fc; background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; max-height: 350px; overflow-y: auto;"></pre>
+            </div>
+            <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="closeFlexModal()" style="padding: 10px 18px; border-radius: 10px; border: 1px solid #cbd5e1; background: white; color: #475569; font-family: 'Prompt'; cursor: pointer; font-weight: 500;">ปิด</button>
+                <button id="copy-flex-btn" onclick="copyFlexJson()" style="padding: 10px 20px; border-radius: 10px; border: none; background: #06c755; color: white; font-family: 'Prompt'; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-regular fa-copy"></i> คัดลอก Flex JSON
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

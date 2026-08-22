@@ -11,9 +11,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const apiRoutes = require('./routes/api');
+const lineWebhookRoutes = require('./routes/lineWebhook');
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Dashboard is the app's home page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/pages/index.html'));
+});
+
+// LINE Webhook Route
+app.use('/api/line', lineWebhookRoutes);
 
 // API Routes
 app.use('/api', apiRoutes);
