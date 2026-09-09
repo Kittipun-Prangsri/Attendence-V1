@@ -170,8 +170,28 @@ router.post('/webhook', async (req, res) => {
           continue;
         }
 
-        // 3. Keywords to trigger Attendance Flex Card
+        // 3. Keywords to trigger Personal Info / Profile Flex Card
         const lower = text.toLowerCase();
+        if (text.includes('ข้อมูลส่วนตัว') || text.includes('ข้อมูล') || lower.includes('profile') || lower.includes('โปรไฟล์') || text.includes('ส่วนตัว')) {
+          const empInfo = await getEmployeeInfo(lineUserId);
+
+          if (!empInfo.isRegistered) {
+            await lineService.replyMessage(event.replyToken, {
+              type: 'text',
+              text: '⚠️ ท่านยังไม่ได้ลงทะเบียนใช้งาน LINE\n\nกรุณาพิมพ์ "เลขบัตรประชาชน 13 หลัก" ของท่านส่งมาในแชทนี้ เพื่อผูกบัญชีผู้ใช้งานก่อนครับ'
+            });
+          } else {
+            const profileFlex = flexBuilder.buildUserProfileFlex({
+              empId: empInfo.empId,
+              fullname: empInfo.fullname,
+              cid: empInfo.cid
+            });
+            await lineService.replyMessage(event.replyToken, profileFlex);
+          }
+          continue;
+        }
+
+        // 4. Keywords to trigger Attendance Flex Card
         if (lower.includes('ลงเวลา') || lower.includes('สแกน') || lower.includes('เข้างาน') || lower.includes('ออกงาน') || lower.includes('check') || lower.includes('menu') || lower.includes('เมนู')) {
           const empInfo = await getEmployeeInfo(lineUserId);
 

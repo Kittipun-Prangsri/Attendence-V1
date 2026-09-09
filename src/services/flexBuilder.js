@@ -492,8 +492,146 @@ function buildRegistrationSuccessFlex(params = {}) {
   };
 }
 
+/**
+ * Builds a Flex Message Card displaying User Profile / Personal Info.
+ */
+function buildUserProfileFlex(params = {}) {
+  const baseUrl = params.baseUrl || process.env.SYSTEM_URL || getLocalNetworkUrl();
+  const {
+    fullname = 'ไม่ระบุชื่อ',
+    empId = '-',
+    cid = '-'
+  } = params;
+
+  const autoCheckUrl = `${baseUrl}/api/attendance/quick-record?type=check${empId ? `&empId=${encodeURIComponent(empId)}` : ''}`;
+
+  return {
+    type: 'flex',
+    altText: `👤 ข้อมูลส่วนตัว: ${fullname}`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#0077B6',
+        paddingAll: '20px',
+        contents: [
+          {
+            type: 'text',
+            text: 'USER PROFILE',
+            color: '#CAF0F8',
+            size: 'xxs',
+            weight: 'bold',
+            align: 'center'
+          },
+          {
+            type: 'text',
+            text: '👤 ข้อมูลส่วนตัวบุคลากร',
+            color: '#FFFFFF',
+            size: 'lg',
+            weight: 'bold',
+            margin: 'xs',
+            align: 'center'
+          }
+        ]
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        paddingAll: '20px',
+        contents: [
+          {
+            type: 'box',
+            layout: 'horizontal',
+            spacing: 'md',
+            alignItems: 'center',
+            contents: [
+              {
+                type: 'box',
+                layout: 'vertical',
+                width: '46px',
+                height: '46px',
+                cornerRadius: '23px',
+                backgroundColor: '#0077B6',
+                alignItems: 'center',
+                justifyContent: 'center',
+                contents: [
+                  { type: 'text', text: '👤', size: 'lg', align: 'center' }
+                ]
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                flex: 1,
+                contents: [
+                  { type: 'text', text: fullname, weight: 'bold', size: 'md', color: '#0F172A', wrap: true },
+                  { type: 'text', text: 'สถานะ: ผูกบัญชีเรียบร้อย ✅', size: 'xs', color: '#047857', margin: 'xs' }
+                ]
+              }
+            ]
+          },
+          { type: 'separator', margin: 'lg', color: '#E2E8F0' },
+          {
+            type: 'box',
+            layout: 'vertical',
+            margin: 'lg',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  { type: 'text', text: '👤 ชื่อ-นามสกุล', size: 'xs', color: '#64748B', flex: 4 },
+                  { type: 'text', text: fullname, size: 'xs', color: '#0F172A', weight: 'bold', flex: 6, align: 'end' }
+                ]
+              },
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  { type: 'text', text: '🆔 รหัสพนักงาน', size: 'xs', color: '#64748B', flex: 4 },
+                  { type: 'text', text: String(empId), size: 'xs', color: '#0F172A', weight: 'bold', flex: 6, align: 'end' }
+                ]
+              },
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  { type: 'text', text: '🪪 เลขบัตรประชาชน', size: 'xs', color: '#64748B', flex: 4 },
+                  { type: 'text', text: cid ? `${String(cid).slice(0,3)}-XXXXX-${String(cid).slice(-3)}` : '-', size: 'xs', color: '#0F172A', weight: 'bold', flex: 6, align: 'end' }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        paddingAll: '20px',
+        contents: [
+          {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: '⚡ กดลงเวลาปฏิบัติงาน',
+              uri: autoCheckUrl
+            },
+            style: 'primary',
+            color: '#0077B6',
+            height: 'md'
+          }
+        ]
+      }
+    }
+  };
+}
+
 module.exports = {
   buildCheckInCheckOutFlex,
   buildAttendanceLogFlex,
-  buildRegistrationSuccessFlex
+  buildRegistrationSuccessFlex,
+  buildUserProfileFlex
 };
+

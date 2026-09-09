@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const flexBuilder = require('../services/flexBuilder');
-
-const flexBuilder = require('../services/flexBuilder');
 const { initAttendancePersonTable } = require('../services/dbInit');
 
 // --- Mock API endpoints for the Frontend ---
